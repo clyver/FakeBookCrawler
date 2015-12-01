@@ -78,6 +78,16 @@ def connect_socket(s, address, port):
     return s
 
 
+def fetch_patterns(regex, html):
+    """
+    Give some regular expression and html, return a list of pattern matches
+    """
+    # My regexFoo needs work, but this will do... for now
+    # Our flags will be sandwiched between 'FLAG:' and '</h2>'
+    pattern_matches = re.findall(regex, html)
+    return pattern_matches
+
+
 def parse_flag(pattern):
     """
     Takes a matched pattern from fetch_flags() and returns
@@ -95,7 +105,7 @@ def fetch_flag_patterns(html):
     """
     # My regexFoo needs work, but this will do... for now
     # Our flags will be sandwiched between 'FLAG:' and '</h2>'
-    pattern_matches = re.findall(r"FLAG\:(?:(?!</h2>)(?:.|\n))*</h2>", html)
+    pattern_matches = fetch_patterns(r"FLAG\:(?:(?!</h2>)(?:.|\n))*</h2>", html)
     return pattern_matches
 
 
@@ -135,3 +145,14 @@ def print_flags():
         print "No flags found"
 
 
+def get_cookies():
+    """
+    Establish the csrf cookie and session id, provided before authentication
+    """
+    global cookie, session_id
+    login_page_html = get(target_login)
+    cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_page_html)
+    cookie = cookie_jar[0].split('=')[1].split(';')[0]
+    session_id = cookie_jar[1].split('=')[1].split(';')[0]
+
+get_cookies()
