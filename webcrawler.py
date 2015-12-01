@@ -1,6 +1,7 @@
 __author__ = 'christopherlyver'
 import socket
 import urlparse
+import urllib
 import re
 
 # FakeBook crawler, implemented through raw sockets #
@@ -27,6 +28,8 @@ found_flags = []
 # HTTP encoding for newline
 crlf = "\r\n\r\n"
 
+passwd = 'E1ELONFK'
+
 
 def get(url):
     """
@@ -37,16 +40,6 @@ def get(url):
     if not path:
         path = '/'
 
-    # The host we'll be connecting to
-    host = parsed_url.netloc
-    # The default HTTP port
-    port = 80
-
-    host_ip = socket.gethostbyname(host)
-    # Establish and connect our socket
-    sock = open_socket()
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock = connect_socket(sock, host_ip, port)
     # Send the actual data
     sock.send("GET {path} HTTP/1.0%{crlf}".format(path=path, crlf=crlf))
 
@@ -55,11 +48,30 @@ def get(url):
     return response
 
 
-def post(url, credentials):
+def post(url, params):
     """
     Make a POST request to the given url, needed for authentication.
     """
-    pass
+    parsed_url = urlparse.urlparse(url)
+    path = parsed_url.path
+    if not path:
+        path = '/'
+
+    #print url
+    #print path
+    params = urllib.urlencode(params)
+    message = "POST {} HTTP/1.0{}".format(path, crlf)
+    content_len = "Content-Length: {}{}".format(len(params), crlf)
+    content_type = "Content-Type: application/x-www-form-urlencoded{}".format(crlf)
+    form_cookie = "Cookie: csrftoken={}; sessionid={}{}".format(cookie, session_id, crlf)
+
+    message = message + content_len + content_type + form_cookie + params + crlf
+
+    print message
+
+    sock.send(message)
+
+    print sock.recv(1000000)
 
 
 def open_socket():
@@ -154,5 +166,23 @@ def get_cookies():
     cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_page_html)
     cookie = cookie_jar[0].split('=')[1].split(';')[0]
     session_id = cookie_jar[1].split('=')[1].split(';')[0]
+    return cookie, session_id
 
-get_cookies()
+
+def login():
+    csrf_cookie, session_id = get_cookies()
+    params = {'username': '001180021',
+              'password': passwd,
+              'csrfmiddlewaretoken': csrf_cookie,
+              'next': '/fakebook/'}
+    post(target_login, params)
+
+# We need one connection
+# Establish and connect our socket
+sock = open_socket()
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+host_ip = socket.gethostbyname('fring.ccs.neu.edu')
+sock = connect_socket(sock, host_ip, 80)
+
+login()
+
