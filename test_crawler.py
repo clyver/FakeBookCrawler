@@ -16,6 +16,8 @@ assert crawler.fetch_flag_patterns(html2) == ['FLAG:flag1</h2>', 'FLAG:flag2</h2
 
 # is_valid_url() test:
 assert crawler.is_valid_url(target_domain)
+good_url = target_domain + 'page1/sub-page1'
+assert crawler.is_valid_url(good_url)
 bad_url1 = 'wikipedia.org'
 bad_url2 = 'facbook.com/{}'.format(target_domain)
 assert not crawler.is_valid_url(bad_url1)
