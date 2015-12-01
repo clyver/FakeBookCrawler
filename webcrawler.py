@@ -18,15 +18,41 @@ visited = []
 # If we receive a cookie, hold onto it
 cookie = None
 
+# If we receive a sessionId, hold onto it
+session_id = None
+
 # If we find a flag, we'll keep it here
 found_flags = []
+
+# HTTP encoding for newline
+crlf = "\r\n\r\n"
 
 
 def get(url):
     """
     Make a GET request to the given url
     """
-    pass
+    parsed_url = urlparse.urlparse(url)
+    path = parsed_url.path
+    if not path:
+        path = '/'
+
+    # The host we'll be connecting to
+    host = parsed_url.netloc
+    # The default HTTP port
+    port = 80
+
+    host_ip = socket.gethostbyname(host)
+    # Establish and connect our socket
+    sock = open_socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock = connect_socket(sock, host_ip, port)
+    # Send the actual data
+    sock.send("GET {path} HTTP/1.0%{crlf}".format(path=path, crlf=crlf))
+
+    # Receive and return the response
+    response = sock.recv(1000000)
+    return response
 
 
 def post(url, credentials):
@@ -34,6 +60,22 @@ def post(url, credentials):
     Make a POST request to the given url, needed for authentication.
     """
     pass
+
+
+def open_socket():
+    """
+    Establish and return a tcp socket
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    return s
+
+
+def connect_socket(s, address, port):
+    """
+    Return a socket that is connected to the given address/port
+    """
+    s.connect((address, port))
+    return s
 
 
 def parse_flag(pattern):
@@ -91,4 +133,5 @@ def print_flags():
             print flag
     else:
         print "No flags found"
+
 
