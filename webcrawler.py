@@ -49,15 +49,13 @@ def get(url, cookies=None):
     get_request = "GET {} HTTP/1.0{}".format(path, crlf)
     if cookies:
         csrf_token = cookies.get('csrf_token')
-        session_id = cookies.get('session_id')
-        get_request += "Set-Cookie: sessionid={}; csrftoken={}{}".format(session_id, csrf_token, crlf)
+        sess_id = cookies.get('session_id')
 
-        get_request = "POST {} HTTP/1.0\{}".format(path, crlf) + \
-                        "Host:fring.ccs.neu.edu:80\r\n" + \
-        	            "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/\r\n" + \
-        	            "Set-Cookie:csrftoken="+csrf_token+"; sessionid="+session_id+"\r\n" + \
-        	            "Connection:keep-alive\r\n" + \
-        	            "Content-Type: application/x-www-form-urlencoded\r\n"
+        get_request = "GET {} HTTP/1.0\{}".format(path, crlf) + \
+                      "Host:fring.ccs.neu.edu:80\r\n" + \
+                      "Set-Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
+                      "Connection:keep-alive\r\n" + \
+                      "Content-Type: application/x-www-form-urlencoded\r\n"
     print "******Sending GET Request:"
     print get_request
     sock.send(get_request)
