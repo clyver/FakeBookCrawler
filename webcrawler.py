@@ -186,7 +186,7 @@ def get_cookies():
     return cookie, session_id
 
 
-def login():
+def run():
     print "Getting cookies..."
     csrf_cookie, session_id = get_cookies()
     print "*******Here are the cookies found - received csrf: {} and sessionId: {}".format(csrf_cookie, session_id)
@@ -205,4 +205,4 @@ def login():
     res = get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie})
 
 
-login()
+run()
