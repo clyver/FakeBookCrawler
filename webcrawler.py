@@ -28,6 +28,7 @@ found_flags = []
 # HTTP encoding for newline
 crlf = "\r\n\r\n"
 
+username = '001180021'
 passwd = 'E1ELONFK'
 
 
@@ -35,17 +36,16 @@ def get(url):
     """
     Make a GET request to the given url
     """
+
     parsed_url = urlparse.urlparse(url)
     path = parsed_url.path
     if not path:
-        path = '/'
+        path = "/"
 
-    # Send the actual data
-    sock.send("GET {path} HTTP/1.0%{crlf}".format(path=path, crlf=crlf))
-
-    # Receive and return the response
-    response = sock.recv(1000000)
-    return response
+    # Fire away
+    sock.send("GET {} HTTP/1.0{}".format(path, crlf))
+    data = sock.recv(1000000)
+    return repr(data)
 
 
 def post(url, params):
@@ -62,10 +62,15 @@ def post(url, params):
     params = urllib.urlencode(params)
     message = "POST {} HTTP/1.0{}".format(path, crlf)
     content_len = "Content-Length: {}{}".format(len(params), crlf)
+    host = "Host: fring.ccs.neu.edu{}".format(crlf)
+    user_agent = "User-Agent: Mozilla/5.0" + crlf
+    accept = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + crlf
     content_type = "Content-Type: application/x-www-form-urlencoded{}".format(crlf)
     form_cookie = "Cookie: csrftoken={}; sessionid={}{}".format(cookie, session_id, crlf)
+    accept_laguage = "Accept-Language: en-us,en;q=0.5" + crlf
+    keep_alive = "Connection: keep-alive" + crlf
 
-    message = message + content_len + content_type + form_cookie + params + crlf
+    message = message + content_len + content_type + form_cookie + host + user_agent + accept + accept_laguage + keep_alive + params + crlf
 
     print message
 
@@ -171,7 +176,7 @@ def get_cookies():
 
 def login():
     csrf_cookie, session_id = get_cookies()
-    params = {'username': '001180021',
+    params = {'username': username,
               'password': passwd,
               'csrfmiddlewaretoken': csrf_cookie,
               'next': '/fakebook/'}
@@ -185,4 +190,8 @@ host_ip = socket.gethostbyname('fring.ccs.neu.edu')
 sock = connect_socket(sock, host_ip, 80)
 
 login()
+# Close up shop...
+sock.shutdown(1)
+sock.close()
+
 
