@@ -2,6 +2,7 @@ __author__ = 'christopherlyver'
 import socket
 import urlparse
 import re
+from copy import copy
 
 # FakeBook crawler, implemented through raw sockets #
 
@@ -15,15 +16,9 @@ target_domain = 'http://fring.ccs.neu.edu/fakebook/'
 target_login = 'http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/'
 
 # Site paths observed, but not yet visited
-frontier = []
+frontier = set()
 # Site paths visited, needed to prevent looping
-visited = []
-
-# If we receive a cookie, hold onto it
-cookie = None
-
-# If we receive a sessionId, hold onto it
-session_id = None
+visited = set()
 
 # If we find a flag, we'll keep it here
 found_flags = []
@@ -35,7 +30,7 @@ username = '001180021'
 passwd = 'E1ELONFK'
 
 
-def get(url, cookies=None):
+def get(url, cookies=None, ):
     """
     Make a GET request to the given url
     """
@@ -58,18 +53,12 @@ def get(url, cookies=None):
                       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
                       "Accept-Language: en-US,en;q=0.5\r\n" + \
                       "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
-                      "Referer: http://fring.ccs.neu.edu/accounts/login/\r\n" + \
                       "Connection:keep-alive\r\n" + \
                       "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
 
-    print "*******My GET REQUEST*********"
-    print get_request
     sock.send(get_request)
     data = sock.recv(4096)
     sock.close()
-    if cookies:
-        print "*******My GET RESPONSE*********"
-        print data
     return data
 
 
@@ -96,13 +85,11 @@ def post(params):
                     "Content-Type: application/x-www-form-urlencoded\r\n" + \
                     "Content-Length:{}\r\n\r\n".format(params_len) + \
                     http_params + "\r\n\r\n"
-    print "*******My POST REQUEST*********"
-    print final_message
+
     sock.sendall(final_message)
     response = sock.recv(4096)
     sock.close()
-    print "*******My POST RESPONSE*********"
-    print response
+
     return response
 
 
@@ -167,8 +154,18 @@ def is_valid_url(url):
     Return True if the url is within the target domain.
     We don't want to crawl over sites outside of our intended scope.
     """
-    # A url is in our target domain if the target domain is in the url, and the first most element
-    return target_domain in url and not url.split(target_domain)[0]
+    # A url is in our target domain if the target domain if preceded with /fakebook/
+    return not url.split('fakebook/')[0]
+
+
+def fetch_urls(html):
+    """
+    Given some html, return a list of valid links not yet visited
+    """
+
+    p = re.compile(ur'fakebook(?:(?!>)(?:.|\n))*/')
+    all_urls = fetch_patterns(p, html)
+    return [url for url in all_urls if (is_valid_url(url)) and url not in visited]
 
 
 def print_flags():
@@ -178,8 +175,10 @@ def print_flags():
     if found_flags:
         for flag in found_flags:
             print flag
+        return found_flags
     else:
         print "No flags found"
+        return []
 
 
 def get_cookies():
@@ -194,19 +193,47 @@ def get_cookies():
     return cookie, session_id
 
 
-def run():
+def crawl():
+     # Make a GET to the login page, and get our cookies
     csrf_cookie, sess_id = get_cookies()
     params = {'username': username,
               'password': passwd,
               'csrfmiddlewaretoken': csrf_cookie,
               'sessionid': session_id,
               'next': '/fakebook/'}
+    # Login and get the response
     login_response = post(params)
     # The login page returns a new session id that we'll need moving forward
-    cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_response)
-    final_session_id = cookie_jar[0].split('=')[1].split(';')[0]
-    print "****Our initial session id: {}".format(sess_id)
-    print "****Our final session id: {}".format(final_session_id)
-    get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie})
+    cookies = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_response)
+    final_session_id = cookies[0].split('=')[1].split(';')[0]
 
-run()
+    cookie_jar = {'session_id': final_session_id, 'csrf_token': csrf_cookie}
+    # Make a GET to the redirected /fakebook/
+    initial_page = get(target_domain, cookie_jar)
+
+    # Time to add the home page to the list of visited sites
+    visited.add('fakebook/')
+
+    # The urls from the initial page:
+    initial_urls = fetch_urls(initial_page)
+    # Add those initial urls to the frontier
+    frontier.update(initial_urls)
+
+    while True:
+        # If there's no new links on the frontier, we're done
+        if not frontier:
+            break
+        for link in copy(frontier):
+            # First thing's first.  Remove from frontier, add to visited
+            frontier.remove(link)
+            visited.add(link)
+
+            # GET this page, search for flags.  The concat of / is a hack, we should fix the regex
+            page = get('/' + link, cookie_jar)
+            # Extract any flags
+            fetch_flags(page)
+
+    # Print all found flags
+    print_flags()
+
+crawl()
