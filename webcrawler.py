@@ -57,7 +57,7 @@ def get(url, cookies=None):
                       "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
                       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
                       "Accept-Language: en-US,en;q=0.5\r\n" + \
-                      "Set-Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
+                      "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
                       "Referer: http://fring.ccs.neu.edu/accounts/login/\r\n" + \
                       "Connection:keep-alive\r\n" + \
                       "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
