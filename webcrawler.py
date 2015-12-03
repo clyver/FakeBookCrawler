@@ -230,9 +230,12 @@ def crawl():
 
             # GET this page, search for flags.  The concat of / is a hack, we should fix the regex
             page = get('/' + link, cookie_jar)
-            # Extract any flags
+            # Extract any flags on the page
             fetch_flags(page)
 
+            # We need to look on this page for links we haven't been to yet
+            frontier.update(fetch_urls(page))
+            
     # Print all found flags
     print_flags()
 
