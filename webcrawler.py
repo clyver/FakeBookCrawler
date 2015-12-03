@@ -52,17 +52,24 @@ def get(url, cookies=None):
         csrf_token = cookies.get('csrf_token')
         sess_id = cookies.get('session_id')
 
-        get_request = "GET {} HTTP/1.0\{}".format(path, crlf) + \
+        get_request = "GET {} HTTP/1.0\r\n".format(path) + \
                       "Host:fring.ccs.neu.edu\r\n" + \
+                      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
+                      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
+                      "Accept-Language: en-US,en;q=0.5\r\n" + \
                       "Set-Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
+                      "Referer: http://fring.ccs.neu.edu/accounts/login/\r\n" + \
                       "Connection:keep-alive\r\n" + \
-                      "Content-Type: application/x-www-form-urlencoded\r\n"
+                      "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
 
     print "*******My GET REQUEST*********"
     print get_request
     sock.send(get_request)
     data = sock.recv(4096)
-
+    sock.close()
+    if cookies:
+        print "*******My GET RESPONSE*********"
+        print data
     return data
 
 
@@ -93,6 +100,9 @@ def post(params):
     print final_message
     sock.sendall(final_message)
     response = sock.recv(4096)
+    sock.close()
+    print "*******My POST RESPONSE*********"
+    print response
     return response
 
 
@@ -195,9 +205,8 @@ def run():
     # The login page returns a new session id that we'll need moving forward
     cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_response)
     final_session_id = cookie_jar[0].split('=')[1].split(';')[0]
-    print "Our final session id {}".format(final_session_id)
-    r = get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie, 'usr': username, 'pass': passwd})
-    print "***Final***"
-    print r
+    print "****Our initial session id: {}".format(sess_id)
+    print "****Our final session id: {}".format(final_session_id)
+    get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie})
 
 run()
