@@ -40,6 +40,7 @@ def get(url, cookies=None):
     Make a GET request to the given url
     """
     sock = open_socket()
+
     parsed_url = urlparse.urlparse(url)
     path = parsed_url.path
     if not path:
@@ -52,47 +53,46 @@ def get(url, cookies=None):
         sess_id = cookies.get('session_id')
 
         get_request = "GET {} HTTP/1.0\{}".format(path, crlf) + \
-                      "Host:fring.ccs.neu.edu:80\r\n" + \
+                      "Host:fring.ccs.neu.edu\r\n" + \
                       "Set-Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
                       "Connection:keep-alive\r\n" + \
                       "Content-Type: application/x-www-form-urlencoded\r\n"
-    print "******Sending GET Request:"
+
+    print "*******My GET REQUEST*********"
     print get_request
     sock.send(get_request)
     data = sock.recv(4096)
 
-    sock.shutdown(1)
-    sock.close()
-    print "Get request responded with:  ******************"
-    print data
     return data
 
 
-
-def post(url, params):
+def post(params):
     """
     Make a POST request to the given url, needed for authentication.
     """
+    sock = open_socket()
+
     csrf_token = params.get('csrfmiddlewaretoken')
     sess_id = params.get('sessionid')
+    user = params.get('username')
+    password = params.get('password')
 
-    new_sock = open_socket()
-    http_params = "csrfmiddlewaretoken="+csrf_token+"&username="+username+"&password="+passwd+"&next=%2Ffakebook%2F"
+    http_params = "csrfmiddlewaretoken="+csrf_token+"&username="+user+"&password="+password+"&next=%2Ffakebook%2F"
     params_len = len(http_params)
     final_message = "POST /accounts/login/ HTTP/1.0\r\n" + \
-                    "Host:fring.ccs.neu.edu:80\r\n" + \
-		            "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/\r\n" + \
-		            "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
-		            "Connection:keep-alive\r\n" + \
-		            "Content-Type: application/x-www-form-urlencoded\r\n" + \
-		            "Content-Length:{}\r\n\r\n".format(params_len) + \
+                    "Host:fring.ccs.neu.edu\r\n" + \
+                    "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/\r\n" + \
+                    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)" + \
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36\r\n" + \
+                    "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
+                    "Connection:keep-alive\r\n" + \
+                    "Content-Type: application/x-www-form-urlencoded\r\n" + \
+                    "Content-Length:{}\r\n\r\n".format(params_len) + \
                     http_params + "\r\n\r\n"
-    print "Sending the following post request:"
+    print "*******My POST REQUEST*********"
     print final_message
-    new_sock.sendall(final_message)
-    response = new_sock.recv(4096)
-    print "Response**************"
-    print response
+    sock.sendall(final_message)
+    response = sock.recv(4096)
     return response
 
 
@@ -185,22 +185,19 @@ def get_cookies():
 
 
 def run():
-    print "Getting cookies..."
-    csrf_cookie, session_id = get_cookies()
-    print "*******Here are the cookies found - received csrf: {} and sessionId: {}".format(csrf_cookie, session_id)
+    csrf_cookie, sess_id = get_cookies()
     params = {'username': username,
               'password': passwd,
               'csrfmiddlewaretoken': csrf_cookie,
               'sessionid': session_id,
               'next': '/fakebook/'}
-    print "*******Now logging in with those creds"
-    auth_response = post(target_login, params)
+    login_response = post(params)
     # The login page returns a new session id that we'll need moving forward
-    cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", auth_response)
+    cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_response)
     final_session_id = cookie_jar[0].split('=')[1].split(';')[0]
     print "Our final session id {}".format(final_session_id)
-    print "Going for the money..."
-    res = get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie})
-
+    r = get(target_domain, {'session_id': final_session_id, 'csrf_token': csrf_cookie, 'usr': username, 'pass': passwd})
+    print "***Final***"
+    print r
 
 run()
