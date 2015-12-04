@@ -30,7 +30,7 @@ username = '001180021'
 passwd = 'E1ELONFK'
 
 
-def get(url, cookies=None, ):
+def get(url, cookies=None):
     """
     Make a GET request to the given url
     """
@@ -42,7 +42,7 @@ def get(url, cookies=None, ):
         path = "/"
 
     # Fire away
-    get_request = "GET {} HTTP/1.0\r\n".format(path) + \
+    get_request = "GET {} HTTP/1.1\r\n".format(path) + \
                   "Host:fring.ccs.neu.edu\r\n" + \
                   "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
                   "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
@@ -74,7 +74,7 @@ def post(params):
 
     http_params = "csrfmiddlewaretoken="+csrf_token+"&username="+user+"&password="+password+"&next=%2Ffakebook%2F"
     params_len = len(http_params)
-    final_message = "POST /accounts/login/ HTTP/1.0\r\n" + \
+    final_message = "POST /accounts/login/ HTTP/1.1\r\n" + \
                     "Host:fring.ccs.neu.edu\r\n" + \
                     "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/\r\n" + \
                     "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)" + \
