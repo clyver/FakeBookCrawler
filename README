@@ -1,4 +1,7 @@
 # FakeBookCrawler
+Michael Chadbourne, 000073518
+Christopher Lyver, 001180021
+
 A web crawler that gathers data from a fake social networking website, provided by NU.
 
 Our high level approach was to create GET and POST functions
