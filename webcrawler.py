@@ -1,8 +1,10 @@
+#!/usr/bin/python
 __author__ = 'christopherlyver'
 import socket
 import urlparse
 import re
 from copy import copy
+import sys
 
 # FakeBook crawler, implemented through raw sockets #
 
@@ -10,7 +12,7 @@ from copy import copy
 http_port = 80
 # The target host
 target_host = 'fring.ccs.neu.edu'
-# The root url
+# The root url *Not publically routable*
 target_domain = 'http://fring.ccs.neu.edu/fakebook/'
 # The login url
 target_login = 'http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/'
@@ -29,8 +31,9 @@ found_flags = []
 eol = "\r\n"
 crlf = "\r\n\r\n"
 
-username = '001180021'
-password = 'E1ELONFK'
+cl_args = sys.argv
+username = cl_args[1]
+password = cl_args[2]
 
 
 def get(url):
@@ -79,6 +82,7 @@ def post():
     # Get the ball rolling with a connected socket
     sock = open_socket()
 
+    # Pull the latest cookies
     csrf_token = cookie_jar.get('csrf_token')
     sess_id = cookie_jar.get('session_id')
 
@@ -101,7 +105,6 @@ def post():
     sock.sendall(post_request)
     response = sock.recv(4096)
     sock.close()
-
     return response
 
 
@@ -150,6 +153,7 @@ def fetch_flags(html):
     Given some html, return True if flags are present, else False.
     If secret flags are found, they will be appended to the global found_flags list
     """
+    global found_flags
     pattern_matches = fetch_flag_patterns(html)
     if pattern_matches:
         # For all matches, do the necessary splicing, and append to found_flags
@@ -232,9 +236,11 @@ def crawl():
     while True:
         # If there's no new links on the frontier, we're done
         if not frontier:
+            # FakeBook. The Final frontier.
             break
+        # *Caution*: Iterating over list we are mutating
         for link in copy(frontier):
-            # First thing's first.  Remove from frontier, add to visited
+            # First thing's first.  Remove from this link frontier, and add to visited
             frontier.remove(link)
             visited.add(link)
 
@@ -249,4 +255,5 @@ def crawl():
     # Print all found flags
     print_flags()
 
+# Boom goes the dynamite
 crawl()
