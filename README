@@ -1,2 +1,12 @@
 # FakeBookCrawler
 A web crawler that gathers data from a fake social networking website, provided by NU.
+
+Our high level approach was to create GET and POST functions
+with the Python socket library.  Once we had those, we constructed
+a number of helper methods that would parse HTML, looking for
+flags, cookies, and valid links.  These helpers made it easy
+to simply iterate over, and modify, the frontier.
+
+The main challenge we faced was getting every single detail just right
+in our requests.  Also, it was a tough design decision to re-open a socket
+on every request.  This hurts performance, but is clean and simple.
