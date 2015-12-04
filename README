@@ -10,3 +10,5 @@ to simply iterate over, and modify, the frontier.
 The main challenge we faced was getting every single detail just right
 in our requests.  Also, it was a tough design decision to re-open a socket
 on every request.  This hurts performance, but is clean and simple.
+
+We tested our crawler by having a test file that tested all the utility methods.
