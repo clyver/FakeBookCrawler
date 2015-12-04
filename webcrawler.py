@@ -24,6 +24,7 @@ visited = set()
 found_flags = []
 
 # HTTP encoding for newline
+eol = "\r\n"
 crlf = "\r\n\r\n"
 
 username = '001180021'
@@ -41,20 +42,22 @@ def get(url, cookies=None):
     if not path:
         path = "/"
 
-    # Fire away
-    get_request = "GET {} HTTP/1.1\r\n".format(path) + \
-                  "Host:fring.ccs.neu.edu\r\n" + \
-                  "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
-                  "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
-                  "Accept-Language: en-US,en;q=0.5\r\n" + \
-                  "Connection:keep-alive\r\n" + \
-                  "Content-Type: application/x-www-form-urlencoded\r\n"
+    # Format our request
+    get_request = "GET {} HTTP/1.1{}".format(path, eol) + \
+                  "Host:fring.ccs.neu.edu{}".format(eol) + \
+                  "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0{}".format(eol)+ \
+                  "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8{}".format(eol)+ \
+                  "Accept-Language: en-US,en;q=0.5{}".format(eol)+ \
+                  "Connection:keep-alive{}".format(eol)+ \
+                  "Content-Type: application/x-www-form-urlencoded{}".format(eol)
     if cookies:
         csrf_token = cookies.get('csrf_token')
         sess_id = cookies.get('session_id')
         get_request += "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n"
-    get_request += "\r\n\r\n"
+    # Add a happy little line break, our little secret
+    get_request += crlf
 
+    # Fire away, and close up shop
     sock.send(get_request)
     data = sock.recv(4096)
     sock.close()
@@ -72,20 +75,24 @@ def post(params):
     user = params.get('username')
     password = params.get('password')
 
-    http_params = "csrfmiddlewaretoken="+csrf_token+"&username="+user+"&password="+password+"&next=%2Ffakebook%2F"
-    params_len = len(http_params)
-    final_message = "POST /accounts/login/ HTTP/1.1\r\n" + \
-                    "Host:fring.ccs.neu.edu\r\n" + \
-                    "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/\r\n" + \
-                    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)" + \
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36\r\n" + \
-                    "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
-                    "Connection:keep-alive\r\n" + \
-                    "Content-Type: application/x-www-form-urlencoded\r\n" + \
-                    "Content-Length:{}\r\n\r\n".format(params_len) + \
-                    http_params + "\r\n\r\n"
 
-    sock.sendall(final_message)
+    body = "csrfmiddlewaretoken={}".format(csrf_token) + \
+           "&username={}".format(user) + \
+           "&password={}".format(password) + \
+           "&next=%2Ffakebook%2F{}".format(crlf)
+    body_len = len(body)
+    headers = "POST /accounts/login/ HTTP/1.1{}".format(eol)+ \
+              "Host:fring.ccs.neu.edu{}".format(eol)+ \
+              "Referer: http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/{}".format(eol) + \
+              "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)" + \
+              "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36{}".format(eol)+ \
+              "Cookie:csrftoken={}; sessionid={}{}".format(csrf_token, sess_id, eol) + \
+              "Connection:keep-alive{}".format(eol) + \
+              "Content-Type: application/x-www-form-urlencoded{}".format(eol) + \
+              "Content-Length:{}{}".format(body_len, crlf)
+
+    post_request = headers + body
+    sock.sendall(post_request)
     response = sock.recv(4096)
     sock.close()
 
