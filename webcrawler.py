@@ -19,6 +19,8 @@ target_login = 'http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/'
 frontier = set()
 # Site paths visited, needed to prevent looping
 visited = set()
+# Keep any authentication tokens here
+cookie_jar = {}
 
 # If we find a flag, we'll keep it here
 found_flags = []
@@ -28,15 +30,18 @@ eol = "\r\n"
 crlf = "\r\n\r\n"
 
 username = '001180021'
-passwd = 'E1ELONFK'
+password = 'E1ELONFK'
 
 
-def get(url, cookies=None):
+def get(url):
     """
     Make a GET request to the given url
     """
+    global cookie_jar
+    # Open a socket to do our dirty business
     sock = open_socket()
 
+    # We'll need to know what path to request
     parsed_url = urlparse.urlparse(url)
     path = parsed_url.path
     if not path:
@@ -50,10 +55,12 @@ def get(url, cookies=None):
                   "Accept-Language: en-US,en;q=0.5{}".format(eol)+ \
                   "Connection:keep-alive{}".format(eol)+ \
                   "Content-Type: application/x-www-form-urlencoded{}".format(eol)
-    if cookies:
-        csrf_token = cookies.get('csrf_token')
-        sess_id = cookies.get('session_id')
-        get_request += "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n"
+    if cookie_jar:
+        # Include the freshest, hot-out-the-oven cookies
+        csrf_token = cookie_jar.get('csrf_token')
+        session_id = cookie_jar.get('session_id')
+        get_request += "Cookie:csrftoken="+csrf_token+"; sessionid="+session_id+"\r\n"
+
     # Add a happy little line break, our little secret
     get_request += crlf
 
@@ -64,20 +71,19 @@ def get(url, cookies=None):
     return data
 
 
-def post(params):
+def post():
     """
-    Make a POST request to the given url, needed for authentication.
+    Make a POST request to the given url, hardcoded for FakeBook authentication.
     """
+    global cookie_jar, username, password
+    # Get the ball rolling with a connected socket
     sock = open_socket()
 
-    csrf_token = params.get('csrfmiddlewaretoken')
-    sess_id = params.get('sessionid')
-    user = params.get('username')
-    password = params.get('password')
-
+    csrf_token = cookie_jar.get('csrf_token')
+    sess_id = cookie_jar.get('session_id')
 
     body = "csrfmiddlewaretoken={}".format(csrf_token) + \
-           "&username={}".format(user) + \
+           "&username={}".format(username) + \
            "&password={}".format(password) + \
            "&next=%2Ffakebook%2F{}".format(crlf)
     body_len = len(body)
@@ -101,7 +107,7 @@ def post(params):
 
 def open_socket():
     """
-    Establish and return a tcp socket
+    Establish and return a tcp socket connected to the target host
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((target_host, http_port))
@@ -191,31 +197,29 @@ def get_cookies():
     """
     Establish the csrf cookie and session id, provided before authentication
     """
-    global cookie, session_id
+    global cookie_jar
     login_page_html = get(target_login)
-    cookie_jar = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_page_html)
-    cookie = cookie_jar[0].split('=')[1].split(';')[0]
-    session_id = cookie_jar[1].split('=')[1].split(';')[0]
-    return cookie, session_id
+    cookies = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_page_html)
+    csrf_token = cookies[0].split('=')[1].split(';')[0]
+    session_id = cookies[1].split('=')[1].split(';')[0]
+    cookie_jar.update({'csrf_token': csrf_token})
+    cookie_jar.update({'session_id': session_id})
 
 
 def crawl():
-     # Make a GET to the login page, and get our cookies
-    csrf_cookie, sess_id = get_cookies()
-    params = {'username': username,
-              'password': passwd,
-              'csrfmiddlewaretoken': csrf_cookie,
-              'sessionid': session_id,
-              'next': '/fakebook/'}
+    global cookie_jar
+    # Make a GET to the login page, and get our cookies
+    get_cookies()
     # Login and get the response
-    login_response = post(params)
+    login_response = post()
     # The login page returns a new session id that we'll need moving forward
     cookies = fetch_patterns(r"Set-Cookie\:(?:(?!;)(?:.|\n))*;", login_response)
     final_session_id = cookies[0].split('=')[1].split(';')[0]
+    cookie_jar['session_id'] = final_session_id
 
-    cookie_jar = {'session_id': final_session_id, 'csrf_token': csrf_cookie}
+
     # Make a GET to the redirected /fakebook/
-    initial_page = get(target_domain, cookie_jar)
+    initial_page = get(target_domain)
 
     # Time to add the home page to the list of visited sites
     visited.add('fakebook/')
@@ -235,7 +239,7 @@ def crawl():
             visited.add(link)
 
             # GET this page, search for flags.  The concat of / is a hack, we should fix the regex
-            page = get('/' + link, cookie_jar)
+            page = get('/' + link)
             # Extract any flags on the page
             fetch_flags(page)
 
