@@ -42,19 +42,18 @@ def get(url, cookies=None, ):
         path = "/"
 
     # Fire away
-    get_request = "GET {} HTTP/1.0{}".format(path, crlf)
+    get_request = "GET {} HTTP/1.0\r\n".format(path) + \
+                  "Host:fring.ccs.neu.edu\r\n" + \
+                  "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
+                  "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
+                  "Accept-Language: en-US,en;q=0.5\r\n" + \
+                  "Connection:keep-alive\r\n" + \
+                  "Content-Type: application/x-www-form-urlencoded\r\n"
     if cookies:
         csrf_token = cookies.get('csrf_token')
         sess_id = cookies.get('session_id')
-
-        get_request = "GET {} HTTP/1.0\r\n".format(path) + \
-                      "Host:fring.ccs.neu.edu\r\n" + \
-                      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:39.0) Gecko/20100101 Firefox/39.0\r\n" + \
-                      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" + \
-                      "Accept-Language: en-US,en;q=0.5\r\n" + \
-                      "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n" + \
-                      "Connection:keep-alive\r\n" + \
-                      "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
+        get_request += "Cookie:csrftoken="+csrf_token+"; sessionid="+sess_id+"\r\n"
+    get_request += "\r\n\r\n"
 
     sock.send(get_request)
     data = sock.recv(4096)
@@ -235,7 +234,7 @@ def crawl():
 
             # We need to look on this page for links we haven't been to yet
             frontier.update(fetch_urls(page))
-            
+
     # Print all found flags
     print_flags()
 
